@@ -33,9 +33,10 @@
     <!-- OFFERS -->
     <section id="view-offers" class="view active" aria-label="Offers">
       <form id="quick" class="quick" autocomplete="off">
-        <input id="quickInput" inputmode="decimal" enterkeyhint="go" placeholder="Quick add: pay miles stores stops  (e.g. 38 12 1 2)" aria-label="Quick add offer">
+        <input id="quickInput" inputmode="decimal" enterkeyhint="go" placeholder="total  miles  stores  stops" aria-label="Quick add offer: total, miles, stores, stops">
         <button type="submit" class="btn primary" aria-label="Add">Add</button>
       </form>
+      <p class="fine quick-hint">Quick add: <b>38 12 1 2</b> = $38 total, 12 miles, 1 store, 2 stops</p>
       <div id="ranking" class="ranking" aria-live="polite"></div>
       <div id="offers" class="offers"></div>
       <div id="empty" class="empty" hidden>
@@ -51,7 +52,7 @@
         <label class="sel">Route for <select id="mapOffer"></select></label>
         <div class="seg" role="group" aria-label="Tap mode">
           <button data-mode="store" class="seg-btn active">+ Store</button>
-          <button data-mode="stop" class="seg-btn">+ Drop-off</button>
+          <button data-mode="stop" class="seg-btn">+ Stop</button>
         </div>
       </div>
       <div id="map" class="map"><div class="map-loading">Loading map…</div></div>
@@ -86,9 +87,9 @@
       </div>
       <div class="howto card">
         <h3>How the score works</h3>
-        <p><b>Net</b> = payout + tip − miles × cost per mile.</p>
-        <p><b>Time</b> = drive (route time, or miles ÷ avg mph) + minutes per store + minutes per item + minutes per drop-off (+ heavy extra). Your own minutes override this.</p>
-        <p><b>Score</b> = 60% from net $/hr vs your target + 40% from gross $/mile vs your target. Hitting a target is worth 80 points, 125% of it is worth 100. Minus points for each extra store and each drop-off past two.</p>
+        <p><b>Net</b> = total pay − miles × cost per mile.</p>
+        <p><b>Time</b> = drive (route time, or miles ÷ avg mph) + minutes per store + minutes per stop.</p>
+        <p><b>Score</b> = 60% from net $/hr vs your target + 40% from gross $/mile vs your target. Hitting a target is worth 80 points, 125% of it is worth 100. Minus points for each extra store and each stop past two.</p>
         <p><b>Accept</b> at 70+, <b>Maybe</b> at 50–69, <b>Decline</b> below 50.</p>
         <p class="fine">Offer Scout is not affiliated with Instacart. Everything stays on this phone.</p>
       </div>
@@ -124,14 +125,10 @@
     </button>
     <div class="math" hidden></div>
     <div class="fields">
-      <label class="f"><span>Payout $</span><input data-k="pay" inputmode="decimal" enterkeyhint="next" placeholder="0.00"></label>
-      <label class="f"><span>Tip $</span><input data-k="tip" inputmode="decimal" enterkeyhint="next" placeholder="0.00"></label>
-      <label class="f"><span>Miles</span><input data-k="miles" inputmode="decimal" enterkeyhint="next" placeholder="0.0"></label>
+      <label class="f"><span>Total pay $</span><input data-k="pay" inputmode="decimal" enterkeyhint="next" placeholder="offer + tip"></label>
       <div class="f step"><span>Stores</span><div class="stepper"><button data-step="stores:-1" aria-label="Fewer stores">−</button><output data-o="stores">1</output><button data-step="stores:1" aria-label="More stores">+</button></div></div>
-      <div class="f step"><span>Drop-offs</span><div class="stepper"><button data-step="stops:-1" aria-label="Fewer drop-offs">−</button><output data-o="stops">1</output><button data-step="stops:1" aria-label="More drop-offs">+</button></div></div>
-      <label class="f"><span>Items</span><input data-k="items" inputmode="numeric" enterkeyhint="next" placeholder="opt."></label>
-      <label class="f"><span>Minutes</span><input data-k="minutes" inputmode="numeric" enterkeyhint="done" placeholder="auto"></label>
-      <label class="f toggle"><span>Heavy</span><input type="checkbox" data-k="heavy"><i></i></label>
+      <div class="f step"><span>Stops</span><div class="stepper"><button data-step="stops:-1" aria-label="Fewer stops">−</button><output data-o="stops">1</output><button data-step="stops:1" aria-label="More stops">+</button></div></div>
+      <label class="f"><span>Miles</span><input data-k="miles" inputmode="decimal" enterkeyhint="done" placeholder="0.0"></label>
     </div>
     <div class="o-foot">
       <button class="btn small" data-act="route">🗺 Route</button>

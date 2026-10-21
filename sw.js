@@ -1,5 +1,5 @@
 // Offer Scout service worker: offline app shell + capped map-tile cache. APIs (routing/geocoding) are network-only.
-const VERSION = 'v1.0.2';
+const VERSION = 'v1.1.0';
 const SHELL = `shell-${VERSION}`, TILES = 'tiles-v1', MAX_TILES = 400;
 const ASSETS = ['./', 'index.html', 'styles.css', 'app.js', 'score.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',

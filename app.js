@@ -1,4 +1,4 @@
-import { scoreOffer, rankOffers, DEFAULTS } from './score.js';
+import { scoreOffer, rankOffers, DEFAULTS, migrateOffer, migrateSettings } from './score.js';
 
 /* ---------- tiny helpers ---------- */
 const $ = (s, el = document) => el.querySelector(s);
@@ -27,15 +27,16 @@ function toast(msg, action) {
 }
 
 /* ---------- state ---------- */
-let settings = { ...DEFAULTS, ...store.get('settings', {}) };
+let settings = { ...DEFAULTS, ...migrateSettings(store.get('settings', {})) };
 let offers = store.get('offers', null);
+if (Array.isArray(offers)) { offers = offers.map(migrateOffer); store.set('offers', offers); store.set('settings', settings); }
 let history = store.get('history', []);
 let lastLoc = store.get('loc', null);
 const blankRoute = () => ({ me: null, stores: [], stops: [] });
 function newOffer(p = {}) {
   const used = new Set(offers.map((o) => o.name));
   let i = 0, name; do { name = 'Offer ' + (i < 26 ? String.fromCharCode(65 + i) : i + 1); i++; } while (used.has(name));
-  return { id: uid(), name, pay: '', tip: '', miles: '', stores: 1, stops: 1, items: '', minutes: '', heavy: false, driveMin: 0, route: blankRoute(), ...p };
+  return { id: uid(), name, pay: '', miles: '', stores: 1, stops: 1, driveMin: 0, route: blankRoute(), ...p };
 }
 if (!Array.isArray(offers)) { offers = []; offers.push(newOffer()); }
 
@@ -47,7 +48,7 @@ function cardFor(o) {
   const el = tpl.content.firstElementChild.cloneNode(true);
   el.dataset.id = o.id;
   $('.o-name', el).value = o.name;
-  $$('[data-k]', el).forEach((inp) => { const k = inp.dataset.k; if (inp.type === 'checkbox') inp.checked = !!o[k]; else inp.value = o[k] ?? ''; });
+  $$('[data-k]', el).forEach((inp) => { inp.value = o[inp.dataset.k] ?? ''; });
   $('[data-o=stores]', el).textContent = o.stores;
   $('[data-o=stops]', el).textContent = o.stops;
   return el;
@@ -109,20 +110,18 @@ function animateNum(el, to) {
 function mathHTML(r) {
   const s = settings, row = (a, b, cls = '') => `<tr class="${cls}"><td>${a}</td><td>${b}</td></tr>`;
   return `<table>
-  ${row('Payout + tip', money(r.pay))}
+  ${row('Total pay', money(r.pay))}
   ${row(`Mileage cost (${fmt1(r.miles)} mi × ${money(s.costPerMile)})`, `<span class="neg">−${money(r.cost)}</span>`)}
   ${row('<b>Net earnings</b>', `<b>${money(r.net)}</b>`, 'sep')}
-  ${r.usedUserMinutes ? row('Time (your estimate)', r.minutes.toFixed(0) + ' min', 'sep') : row(r.routedDrive ? 'Drive (routed)' : `Drive (${fmt1(r.miles)} mi ÷ ${s.avgMph} mph)`, r.driveMin.toFixed(0) + ' min', 'sep')}
-  ${r.usedUserMinutes ? '' : row(`Shopping (${r.stores}×${s.shopMinPerStore}${r.items ? ` + ${r.items}×${s.shopMinPerItem}` : ''})`, r.shopMin.toFixed(0) + ' min')}
-  ${r.usedUserMinutes ? '' : row(`Drop-offs (${r.stops}×${s.minPerStop})`, r.stopMin.toFixed(0) + ' min')}
-  ${r.extraMin && !r.usedUserMinutes ? row('Heavy items', r.extraMin + ' min') : ''}
-  ${row('<b>Total time</b>', `<b>${r.minutes.toFixed(0)} min</b>`)}
+  ${row(r.routedDrive ? 'Drive (routed)' : `Drive (${fmt1(r.miles)} mi ÷ ${s.avgMph} mph)`, r.driveMin.toFixed(0) + ' min', 'sep')}
+  ${row(`Stores (${r.stores}×${s.shopMinPerStore})`, r.shopMin.toFixed(0) + ' min')}
+  ${row(`Stops (${r.stops}×${s.minPerStop})`, r.stopMin.toFixed(0) + ' min')}
+  ${row('<b>Estimated time</b>', `<b>${r.minutes.toFixed(0)} min</b>`)}
   ${row(`Net $/hr vs $${s.targetHourly} target`, `$${r.hourly.toFixed(2)} → ${r.hrPts.toFixed(0)} pts`, 'sep')}
-  ${row(`Gross $/mi vs $${s.targetPerMile} target`, `${Number.isFinite(r.perMile) ? '$' + r.perMile.toFixed(2) : '∞'} → ${r.miPts.toFixed(0)} pts`)}
+  ${row(`$/mi vs $${s.targetPerMile} target`, `${Number.isFinite(r.perMile) ? '$' + r.perMile.toFixed(2) : '∞'} → ${r.miPts.toFixed(0)} pts`)}
   ${row(`Blend ${Math.round(s.weightHourly * 100)}% / ${Math.round((1 - s.weightHourly) * 100)}%`, r.base.toFixed(1))}
   ${r.penStores ? row(`Extra stores (${r.stores - 1}×${s.storePenalty})`, `<span class="neg">−${r.penStores}</span>`) : ''}
-  ${r.penStops ? row(`Drop-offs past 2 (${r.stops - 2}×${s.stopPenalty})`, `<span class="neg">−${r.penStops}</span>`) : ''}
-  ${r.penHeavy ? row('Heavy items', `<span class="neg">−${r.penHeavy}</span>`) : ''}
+  ${r.penStops ? row(`Stops past 2 (${r.stops - 2}×${s.stopPenalty})`, `<span class="neg">−${r.penStops}</span>`) : ''}
   ${row('<b>Score</b>', `<b>${r.score}/100 · ${r.verdict}</b>`, 'sep')}
   </table><p class="fine">Accept ≥ ${s.acceptAt}, Maybe ≥ ${s.maybeAt}. Edit any of this in Settings.</p>`;
 }
@@ -144,8 +143,7 @@ listEl.addEventListener('input', (e) => {
   const o = offers.find((x) => x.id === card.dataset.id); if (!o) return;
   if (e.target.classList.contains('o-name')) { o.name = e.target.value || 'Offer'; saveSoon(); updateScores(); return; }
   const k = e.target.dataset.k; if (!k) return;
-  if (e.target.type === 'checkbox') { o[k] = e.target.checked; haptic(); }
-  else { o[k] = e.target.value.replace(',', '.'); if (k === 'miles') o.driveMin = 0; }
+  o[k] = e.target.value.replace(',', '.'); if (k === 'miles') o.driveMin = 0;
   saveSoon(); updateScores();
 });
 
@@ -231,9 +229,9 @@ $('#clearHist').addEventListener('click', () => { if (history.length && confirm(
 /* ---------- settings ---------- */
 const SCHEMA = [
   ['Costs', [['costPerMile', 'Cost per mile $', 'Gas + wear. Real cost ≈ $0.20–0.35; IRS rate $0.70', 0.01, [['Real $0.30', 0.30], ['IRS $0.70', 0.70]]], ['avgMph', 'Average speed (mph)', 'Used when no route is calculated', 1]]],
-  ['Time', [['shopMinPerStore', 'Minutes per store', 'Walk, shop, checkout', 1], ['shopMinPerItem', 'Minutes per item', 'Added per item/unit', 0.1], ['minPerStop', 'Minutes per drop-off', 'Park, hand off, photo', 1], ['heavyMinutes', 'Heavy items extra (min)', '', 1]]],
+  ['Time', [['shopMinPerStore', 'Minutes per store', 'Walk, shop, checkout', 1], ['minPerStop', 'Minutes per stop', 'Park, hand off, photo', 1]]],
   ['Targets', [['targetHourly', 'Target net $/hr', '', 1], ['targetPerMile', 'Target gross $/mile', 'Classic rule: $2/mi', 0.1], ['weightHourly', '$/hr weight (0–1)', 'Rest goes to $/mile', 0.05]]],
-  ['Penalties (points)', [['storePenalty', 'Per extra store', '', 1], ['stopPenalty', 'Per drop-off past 2', '', 1], ['heavyPenalty', 'Heavy items', '', 1]]],
+  ['Penalties (points)', [['storePenalty', 'Per extra store', '', 1], ['stopPenalty', 'Per stop past 2', '', 1]]],
   ['Verdict', [['acceptAt', 'Accept at score ≥', '', 1], ['maybeAt', 'Maybe at score ≥', 'Below this: decline', 1]]],
 ];
 function renderSettings() {
@@ -290,7 +288,7 @@ $('.seg').addEventListener('click', (e) => { const b = e.target.closest('[data-m
 function addPoint(kind, lat, lng, label) {
   const o = curOffer(); o.route ||= blankRoute();
   const list = kind === 'store' ? o.route.stores : o.route.stops;
-  list.push({ lat, lng, label: label || `${kind === 'store' ? 'Store' : 'Drop-off'} ${list.length + 1}` });
+  list.push({ lat, lng, label: label || `${kind === 'store' ? 'Store' : 'Stop'} ${list.length + 1}` });
   saveSoon(); haptic(); drawPoints();
 }
 
@@ -355,7 +353,7 @@ $('#geoForm').addEventListener('submit', async (e) => {
     out.replaceChildren();
     if (!res.length) { out.innerHTML = '<div class="fine">No matches. Try adding the city.</div>'; return; }
     for (const r of res) {
-      const d = document.createElement('div'); d.className = 'geo-item'; d.innerHTML = '<span></span><button class="btn small">Store</button><button class="btn small">Drop-off</button>';
+      const d = document.createElement('div'); d.className = 'geo-item'; d.innerHTML = '<span></span><button class="btn small">Store</button><button class="btn small">Stop</button>';
       d.firstChild.textContent = r.display_name;
       const short = r.display_name.split(',').slice(0, 2).join(',');
       d.children[1].onclick = () => { addPoint('store', +r.lat, +r.lon, short); out.replaceChildren(); drawPoints(true); };
@@ -368,7 +366,7 @@ $('#geoForm').addEventListener('submit', async (e) => {
 $('#routeBtn').addEventListener('click', async () => {
   const o = curOffer(); const rt = o.route ||= blankRoute();
   const pts = [rt.me, ...rt.stores, ...rt.stops].filter(Boolean);
-  if (pts.length < 2) { toast('Add at least 2 points (you, a store, a drop-off)'); return; }
+  if (pts.length < 2) { toast('Add at least 2 points (you, a store, a stop)'); return; }
   const b = $('#routeBtn'); b.disabled = true; b.textContent = 'Routing…';
   try {
     const coords = pts.map((p) => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(';');

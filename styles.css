@@ -44,7 +44,8 @@ main{padding:12px calc(14px + var(--sar)) calc(var(--tabh) + 96px + var(--sab)) 
 .btn.bad{background:var(--bad-bg);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,transparent)}
 .btn:disabled{opacity:.5}
 
-.quick{display:flex;gap:8px;margin-bottom:12px}
+.quick{display:flex;gap:8px;margin-bottom:6px}
+.quick-hint{margin:0 4px 12px}
 .quick input{flex:1;min-width:0;min-height:48px;padding:0 14px;border-radius:14px;border:1px solid var(--line);background:var(--card);font-size:16px}
 input:focus,select:focus{outline:2px solid color-mix(in srgb,var(--accent) 60%,transparent);outline-offset:1px}
 

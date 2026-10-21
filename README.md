@@ -5,22 +5,22 @@ A fast, installable iPhone web app (PWA) that scores Instacart shopper batch off
 **Install on iPhone:** open the site in Safari, tap Share, then **Add to Home Screen**. It runs full screen and works offline. Routing and address search need a connection.
 
 ## Features
-- Several offers side by side: add, duplicate, delete, quick add (`38 12 1 2` = pay, miles, stores, drop-offs)
+- Four inputs per offer (Total pay, Stores, Stops, Miles). Several offers side by side: add, duplicate, delete, quick add (`38 12 1 2` = total, miles, stores, stops)
 - Live score ring, verdict, one-line reason, live ranking with the best offer highlighted, and the full math on tap
-- Map (Leaflet + OpenStreetMap): use my location, search addresses (Nominatim), tap to drop store and drop-off pins, drag pins, and get driving miles and minutes from the public OSRM router, filled into the offer automatically
+- Map (Leaflet + OpenStreetMap): use my location, search addresses (Nominatim), tap to drop store and stop pins, drag pins, and get driving miles and minutes from the public OSRM router, filled into the offer automatically
 - History of accepted and declined offers with stats (avg net $/hr, net earned, $/mile)
 - Every threshold is editable in Settings. Everything is stored on the phone in localStorage. No accounts, no backend.
 
 ## Scoring model (`score.js`)
 | Step | Formula (defaults) |
 |---|---|
-| Payout | offer + tip |
-| Net | payout − miles × **$0.30**/mi (IRS preset $0.70) |
-| Time | drive (route minutes, or miles ÷ **25 mph**) + stores × **20 min** + items × **0.6 min** + drop-offs × **5 min** (+ **5 min** heavy). Minutes you type override all of this. |
+| Inputs | **Total pay** (offer + tip together), stores, stops, miles |
+| Net | total − miles × **$0.30**/mi (IRS preset $0.70) |
+| Time | drive (route minutes, or miles ÷ **25 mph**) + stores × **20 min** + stops × **5 min** |
 | Net $/hr | net ÷ hours |
-| $/mile | payout ÷ miles (gross, the classic "$2/mile" rule) |
+| $/mile | total ÷ miles (gross, the classic "$2/mile" rule) |
 | Points | each ratio vs target (**$25/hr**, **$2/mi**) → 0–100: on target = 80, ≥125% = 100 |
-| Score | 60% × $/hr points + 40% × $/mi points − 4 per extra store − 3 per drop-off past 2 − 3 heavy, clamped 0–100. Net ≤ 0 scores 0. |
+| Score | 60% × $/hr points + 40% × $/mi points − 4 per extra store − 3 per stop past 2, clamped 0–100. Net ≤ 0 scores 0. |
 | Verdict | ≥ 70 ACCEPT · 50–69 MAYBE · < 50 DECLINE |
 
 ## Dev
