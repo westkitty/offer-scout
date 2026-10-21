@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offer Scout</title>
+<meta name="description" content="Score Instacart batch offers in seconds: $/hr, $/mile, stores, stops, and a clear accept or decline.">
+<meta name="theme-color" content="#0b0f14" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f4f6f8" media="(prefers-color-scheme: light)">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Offer Scout">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="styles.css">
+<link rel="modulepreload" href="score.js">
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">
+      <img src="icons/icon-192.png" alt="" width="30" height="30">
+      <div><h1>Offer Scout</h1><p id="subtitle">Score batches before you tap accept</p></div>
+    </div>
+    <div id="best" class="best" hidden></div>
+  </header>
+
+  <main>
+    <!-- OFFERS -->
+    <section id="view-offers" class="view active" aria-label="Offers">
+      <form id="quick" class="quick" autocomplete="off">
+        <input id="quickInput" inputmode="decimal" enterkeyhint="go" placeholder="Quick add: pay miles stores stops  (e.g. 38 12 1 2)" aria-label="Quick add offer">
+        <button type="submit" class="btn primary" aria-label="Add">Add</button>
+      </form>
+      <div id="ranking" class="ranking" aria-live="polite"></div>
+      <div id="offers" class="offers"></div>
+      <div id="empty" class="empty" hidden>
+        <div class="empty-art">🛒</div>
+        <h2>No offers yet</h2>
+        <p>Tap <b>+</b> to add a batch, or type 4 numbers above.<br>Add a few at once to compare them side by side.</p>
+      </div>
+    </section>
+
+    <!-- MAP -->
+    <section id="view-map" class="view" aria-label="Map">
+      <div class="map-tools">
+        <label class="sel">Route for <select id="mapOffer"></select></label>
+        <div class="seg" role="group" aria-label="Tap mode">
+          <button data-mode="store" class="seg-btn active">+ Store</button>
+          <button data-mode="stop" class="seg-btn">+ Drop-off</button>
+        </div>
+      </div>
+      <div id="map" class="map"><div class="map-loading">Loading map…</div></div>
+      <div class="map-panel">
+        <form id="geoForm" class="geo" autocomplete="off">
+          <input id="geoQ" type="search" enterkeyhint="search" placeholder="Search a store or address">
+          <button class="btn" type="submit">Find</button>
+        </form>
+        <div id="geoResults" class="geo-results"></div>
+        <div class="map-actions">
+          <button id="locBtn" class="btn">📍 Use my location</button>
+          <button id="routeBtn" class="btn primary">Calculate route</button>
+        </div>
+        <ol id="pts" class="pts"></ol>
+        <div id="routeOut" class="route-out" hidden></div>
+        <p class="fine">Tap the map to drop a pin. Routes use public OpenStreetMap services; if they are down, type miles by hand.</p>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section id="view-history" class="view" aria-label="History">
+      <div id="stats" class="stats"></div>
+      <div class="hist-head"><h2>Recent decisions</h2><button id="clearHist" class="btn ghost small">Clear</button></div>
+      <ul id="history" class="history"></ul>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="view" aria-label="Settings">
+      <form id="settings" class="settings" autocomplete="off"></form>
+      <div class="set-actions">
+        <button id="resetSettings" class="btn ghost">Reset to defaults</button>
+      </div>
+      <div class="howto card">
+        <h3>How the score works</h3>
+        <p><b>Net</b> = payout + tip − miles × cost per mile.</p>
+        <p><b>Time</b> = drive (route time, or miles ÷ avg mph) + minutes per store + minutes per item + minutes per drop-off (+ heavy extra). Your own minutes override this.</p>
+        <p><b>Score</b> = 60% from net $/hr vs your target + 40% from gross $/mile vs your target. Hitting a target is worth 80 points, 125% of it is worth 100. Minus points for each extra store and each drop-off past two.</p>
+        <p><b>Accept</b> at 70+, <b>Maybe</b> at 50–69, <b>Decline</b> below 50.</p>
+        <p class="fine">Offer Scout is not affiliated with Instacart. Everything stays on this phone.</p>
+      </div>
+      <p class="fine center">Install: Safari → Share → Add to Home Screen.</p>
+    </section>
+  </main>
+
+  <button id="fab" class="fab" aria-label="Add offer"><span>+</span></button>
+
+  <nav class="tabbar" role="tablist">
+    <button class="tab active" data-view="offers" role="tab"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Offers</span></button>
+    <button class="tab" data-view="map" role="tab"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg><span>Map</span></button>
+    <button class="tab" data-view="history" role="tab"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v4h4M12 7v5l3 2"/></svg><span>History</span></button>
+    <button class="tab" data-view="settings" role="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Settings</span></button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <label id="hapticLabel" class="sr"><input type="checkbox" switch id="hapticSwitch" tabindex="-1">haptic</label>
+</div>
+
+<template id="tplOffer">
+  <article class="offer card">
+    <div class="o-head">
+      <span class="rank"></span>
+      <input class="o-name" aria-label="Offer name" maxlength="24">
+      <button class="icon-btn" data-act="dup" aria-label="Duplicate offer"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+      <button class="icon-btn" data-act="del" aria-label="Delete offer">✕</button>
+    </div>
+    <button class="o-score" data-act="math" aria-expanded="false">
+      <svg class="ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="ring-bg" cx="22" cy="22" r="19"/><circle class="ring-fg" cx="22" cy="22" r="19"/></svg>
+      <span class="score-num">0</span>
+      <span class="o-verdict"><b class="chip">—</b><span class="reason"></span><span class="tap-hint">Tap for the math</span></span>
+    </button>
+    <div class="math" hidden></div>
+    <div class="fields">
+      <label class="f"><span>Payout $</span><input data-k="pay" inputmode="decimal" enterkeyhint="next" placeholder="0.00"></label>
+      <label class="f"><span>Tip $</span><input data-k="tip" inputmode="decimal" enterkeyhint="next" placeholder="0.00"></label>
+      <label class="f"><span>Miles</span><input data-k="miles" inputmode="decimal" enterkeyhint="next" placeholder="0.0"></label>
+      <div class="f step"><span>Stores</span><div class="stepper"><button data-step="stores:-1" aria-label="Fewer stores">−</button><output data-o="stores">1</output><button data-step="stores:1" aria-label="More stores">+</button></div></div>
+      <div class="f step"><span>Drop-offs</span><div class="stepper"><button data-step="stops:-1" aria-label="Fewer drop-offs">−</button><output data-o="stops">1</output><button data-step="stops:1" aria-label="More drop-offs">+</button></div></div>
+      <label class="f"><span>Items</span><input data-k="items" inputmode="numeric" enterkeyhint="next" placeholder="opt."></label>
+      <label class="f"><span>Minutes</span><input data-k="minutes" inputmode="numeric" enterkeyhint="done" placeholder="auto"></label>
+      <label class="f toggle"><span>Heavy</span><input type="checkbox" data-k="heavy"><i></i></label>
+    </div>
+    <div class="o-foot">
+      <button class="btn small" data-act="route">🗺 Route</button>
+      <span class="routed" hidden></span>
+      <span class="grow"></span>
+      <button class="btn small bad" data-act="decline">Decline</button>
+      <button class="btn small good" data-act="accept">Accept</button>
+    </div>
+  </article>
+</template>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
